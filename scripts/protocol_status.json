@@ -1,0 +1,30 @@
+{"status data":
+  {
+    "successful":[
+      {"code":"000", "message":"Ok"},
+      {"code":"001", "message":"Successful connection"},
+      {"code":"002", "message":"Successful disconnection"},
+      {"code":"003", "message":"Value inserted successfully"},
+      {"code":"004", "message":"Value updated successfully"}
+    ],
+    "client error":[
+      {"code":"100", "message":"Connection timeout - Maximum time to connect to the server exceeded"},
+      {"code":"101", "message":"Connection error - Wrong client ip address"},
+      {"code":"102", "message":"Connection error - Wrong port"},
+      {"code":"103", "message":"Insert error - Key entered already exists"},
+      {"code":"104", "message":"Read error - Key does not exist"},
+      {"code":"105", "message":"Update error - Key does not exist"},
+      {"code":"106", "message":"Request timeout - Connection closed"},
+      {"code":"107", "message":"Invalid action"},
+      {"code":"199", "message":"Unknown error"}
+    ],
+    "server error":
+      [
+      {"code":"200", "message":"Internal server error"},
+      {"code":"201", "message":"Unsupported functionality"},
+      {"code":"202", "message":"Congested server"},
+      {"code":"203", "message":"Disconnection failed"},
+      {"code":"299", "message":"Unknown error"}
+      ]
+    }
+}
