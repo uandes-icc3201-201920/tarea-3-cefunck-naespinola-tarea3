@@ -50,7 +50,7 @@ class Database:
     def delete(self, key):
         error_message = self.validate_errors("delete",key)
         if error_message != None:
-            return key
+            return error_message
         del self.data[key]
         return "successful delete"
 

@@ -5,7 +5,8 @@
       {"code":"001", "message":"Successful connection"},
       {"code":"002", "message":"Successful disconnection"},
       {"code":"003", "message":"Value inserted successfully"},
-      {"code":"004", "message":"Value updated successfully"}
+      {"code":"004", "message":"Value updated successfully"},
+      {"code":"005", "message":"Value deleted successfully"}
     ],
     "client error":[
       {"code":"100", "message":"Connection timeout - Maximum time to connect to the server exceeded"},
@@ -16,6 +17,7 @@
       {"code":"105", "message":"Update error - Key does not exist"},
       {"code":"106", "message":"Request timeout - Connection closed"},
       {"code":"107", "message":"Invalid action"},
+      {"code":"108", "message":"Delete error - key does not exist"},
       {"code":"199", "message":"Unknown error"}
     ],
     "server error":
