@@ -4,6 +4,19 @@ import socket
 import time
 import sys
 
+class Exit_flag:
+
+    def __init__(self):
+        self.value = False
+
+
+    def activate_exit(self):
+        self.value = True
+
+
+    def checkout(self):
+        return self.value
+
 
 def request_parameterizer(command, key = None, value = None):
     request_parameters = []
@@ -36,64 +49,67 @@ def request_parameterizer(command, key = None, value = None):
     return request_parameters
 
 
-def exec_client_connect(key=None, value=None, client=None):
+def exec_client_connect(key=None, value=None, client=None, exit_flag = None):
     ip = "ubuntu"
     if value != None:
         ip = value
     connection_thread = threading.Thread(target=try_connect, args=(client,ip,50007,))
     connection_thread.start()
     connection_thread.join()
-    server_thread = threading.Thread(target=server_listener, args=(client,))
-    server_thread.start()
+    if client.is_alive():
+        server_thread = threading.Thread(target=server_listener, args=(client, exit_flag))
+        server_thread.start()
 
 
-def exec_client_disconnect(key=None, value=None, client=None):
-    output = "por implementar"
-    return output
+def exec_client_disconnect(key=None, value=None, client=None, exit_flag = None):
+    output = "disconnecting..."
+    client.disconnect()
+    print(output)
 
 
-def exec_client_quit(key=None, value=None, client=None):
-    exec_client_disconnect()
+def exec_client_quit(key=None, value=None, client=None, exit_flag = None):
+    exec_client_disconnect(key, value, client, exit_flag)
+    exit_flag.activate_exit()
     console_output = "closing the client..."
     print(console_output)
 
 
-def exec_client_insert(key=None, value=None, client=None):
+def exec_client_insert(key=None, value=None, client=None, exit_flag = None):
     line = "insert ver1.0"
     parameters = request_parameterizer("insert",key,value)
     content = value
     client.send_request(line, parameters, content)
 
 
-def exec_client_get(key=None, value=None, client=None):
+def exec_client_get(key=None, value=None, client=None, exit_flag = None):
     line = "get ver1.0"
     parameters = request_parameterizer("get", key)
     content = value
     client.send_request(line, parameters, content)
 
 
-def exec_client_peek(key=None, value=None, client=None):
+def exec_client_peek(key=None, value=None, client=None, exit_flag = None):
     line = "peek ver1.0"
     parameters = request_parameterizer("peek", key)
     content = value
     client.send_request(line, parameters, content)
 
 
-def exec_client_update(key=None, value=None, client=None):
+def exec_client_update(key=None, value=None, client=None, exit_flag = None):
     line = "update ver1.0"
     parameters = request_parameterizer("update", key, value)
     content = value
     client.send_request(line, parameters, content)
 
 
-def exec_client_delete(key=None, value=None, client=None):
+def exec_client_delete(key=None, value=None, client=None, exit_flag = None):
     line = "delete ver1.0"
     parameters = request_parameterizer("delete", key)
     content = value
     client.send_request(line, parameters, content)
 
 
-def exec_client_list(key=None, value=None, client=None):
+def exec_client_list(key=None, value=None, client=None, exit_flag = None):
     line = "list ver1.0"
     parameters = request_parameterizer("list")
     content = value
@@ -106,7 +122,7 @@ def valid_command(command):
     return False
 
 
-def function_handler(command, key=None, value=None, client=None):
+def function_handler(command, key=None, value=None, client=None, exit_flag=None):
     commads_functions = {
         "connect" : exec_client_connect,
         "disconnect" : exec_client_disconnect,
@@ -118,7 +134,7 @@ def function_handler(command, key=None, value=None, client=None):
         "delete" : exec_client_delete,
         "list" : exec_client_list,
     }
-    return commads_functions[command](key, value, client)
+    return commads_functions[command](key, value, client, exit_flag)
 
 
 def valid_user_input(user_input):
@@ -178,25 +194,27 @@ def decode_input(user_input):
     return (command, key, value)
 
 
-def process_input(user_input, client):
+def process_input(user_input, client, exit_flag):
     user_input = user_input.strip()
     user_input = user_input.lower()
     error_message = valid_user_input(user_input)
     if error_message != None:
         return error_message
     (command,key,value) = decode_input(user_input)
-    output = function_handler(command, key, value, client)
+    output = function_handler(command, key, value, client, exit_flag)
     return output
 
 
-def input_listener(client):
+def input_listener(client, exit_flag):
     print("client is waiting for instruction...")
-    while True:
+    while not exit_flag.checkout():
         user_input = input()
-        error_message = process_input(user_input, client)
+        error_message = process_input(user_input, client, exit_flag)
         if error_message != None:
             print(error_message)
-        print("client is waiting for response...")
+        if client.is_alive():
+            print("client is waiting for response...")
+
 
 def message_break_drown(message):
     content = None
@@ -208,32 +226,29 @@ def message_break_drown(message):
     return (line, parameters, content)
 
 def response_handler(response):
-    console_output = "response not handled yet"
+    status_message = "response not handled yet"
+    extra_info = None
     (line,parameters,content) = message_break_drown(response)
-    status = line.split(" ")[0]
-    if status in ["000","001","002","003","004"]:
-        if "key" in str(parameters):
-            console_output = "".join(parameters.split(":")[1:])
-        elif "type" in str(parameters):
-            console_output = content
-        else:
-            console_output = "Ok"
-    else:
-        status_message = Client().get_status_by_code(status)["message"]
-        console_output = status_message
-        if status in ["108"]:
-            console_output = console_output+" -> key: "+"".join(parameters.split(":")[1:])
-    print(console_output)
+    status_code = line.split(" ")[0]
+    if status_code in ["003","108"]:
+        extra_info = "key: "+"".join(parameters.split(":")[1:])
+    elif status_code == "000":
+        extra_info = content
+    status_message = Client().get_status_by_code(status_code)["message"]
+    print(status_message)
+    if extra_info != None:
+        print(extra_info)
 
 
-def server_listener(client):
-    while client.is_alive():
+def server_listener(client, exit_flag):
+    while client.is_alive() and not exit_flag.checkout():
         try:
             response = client.receive_response()
             response_handler(response)
             print("client is waiting for instruction...")
         except:
-            pass
+            break
+
 
 
 def try_connect(client, ip, port):
@@ -242,26 +257,34 @@ def try_connect(client, ip, port):
     while seconds < 10 and not client.is_connected():
         try:
             client.connect(ip, port)
-            status_code = "001"
         except:
             print("trying to connect...")
         time.sleep(1)
         seconds += 1
+    if client.is_connected():
+        status_code = "001"
     status_message = Client().get_status_by_code(status_code)["message"]
     console_output = status_message
     print(console_output)
 
 
-def client_handler(client):
+def client_handler(client, exit_flag):
     connection_thread = threading.Thread(target=try_connect, args=(client,"ubuntu",50007,))
     connection_thread.start()
     connection_thread.join()
-    interface_thread = threading.Thread(target=input_listener, args=(client,))
+    interface_thread = threading.Thread(target=input_listener, args=(client,exit_flag))
+    server_thread = threading.Thread(target=server_listener, args=(client,exit_flag))
     interface_thread.start()
-    server_thread = threading.Thread(target=server_listener, args=(client,))
-    server_thread.start()
+    if client.is_alive() and not exit_flag.checkout():
+        server_thread.start()
+        server_thread.join()
+    interface_thread.join()
+    status_code = "002"
+    status_message = Client().get_status_by_code(status_code)["message"]
+    print(status_message)
 
 
 if __name__ == "__main__":
     client = Client()
-    client_handler(client)
+    exit_flag = Exit_flag()
+    client_handler(client, exit_flag)

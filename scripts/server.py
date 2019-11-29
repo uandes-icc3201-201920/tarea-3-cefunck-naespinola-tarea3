@@ -99,7 +99,10 @@ def request_handler(client_socket, request, database):
         else:
             response_line = "203" +" "+version
     else:
-        response_line = "000" +" "+version
+        if "Error" not in str(response_parameters):
+            response_line = "000" +" "+version
+        else:
+            response_line = "299" +" "+version
     print("response is sent...")
     server.send_response(client_socket, response_line, response_parameters, response_content)
 
@@ -107,9 +110,11 @@ def request_handler(client_socket, request, database):
 def client_handler(server, client_socket, database):
     print("one client is connected...")
     while True:
-        request = server.receive_request(client_socket)
-        request_handler(client_socket, request, database)
-
+        try:
+            request = server.receive_request(client_socket)
+            request_handler(client_socket, request, database)
+        except:
+            break
 
 def connections_handler(server, database):
     while True:
