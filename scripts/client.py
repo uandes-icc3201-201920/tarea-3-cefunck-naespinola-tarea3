@@ -230,10 +230,12 @@ def response_handler(response):
     extra_info = None
     (line,parameters,content) = message_break_drown(response)
     status_code = line.split(" ")[0]
-    if status_code in ["003","108"]:
+    if status_code in ["003"]:
         extra_info = "key: "+"".join(parameters.split(":")[1:])
     elif status_code == "000":
         extra_info = content
+        if "key" in parameters:
+            extra_info = "".join(parameters.split(":")[1:])
     status_message = Client().get_status_by_code(status_code)["message"]
     print(status_message)
     if extra_info != None:
