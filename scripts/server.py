@@ -79,12 +79,12 @@ def request_handler(client_socket, request, database):
         else:
             response_line = "103" +" "+version
     elif action == "update":
-        if database.peek(key):
+        if "Error" not in db_output:
             response_line = "004" +" "+version
         else:
             response_line = "105" +" "+version
     elif action == "delete":
-        if database.peek(key):
+        if "Error" not in db_output:
             response_line = "005" +" "+version
         else:
             response_line = "108" +" "+version
