@@ -74,7 +74,6 @@ def request_handler(client_socket, request, database):
             response_content = db_output
     response_parameters = response_parameterizer(action, db_output, key)
     if action == "insert":
-        print(response_parameters)
         if "Error" not in str(response_parameters):
             response_line = "003" +" "+version
         else:
