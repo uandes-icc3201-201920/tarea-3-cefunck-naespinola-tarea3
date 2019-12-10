@@ -113,7 +113,9 @@ def client_handler(server, client_socket, database):
         try:
             request = server.receive_request(client_socket)
             request_handler(client_socket, request, database)
-        except:
+        except Exception as e:
+            #print(e)
+            client_socket.close()
             break
 
 def connections_handler(server, database):

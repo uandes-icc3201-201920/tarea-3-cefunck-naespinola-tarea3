@@ -3,6 +3,7 @@ import threading
 import socket
 import time
 import sys
+#import traceback
 
 class Exit_flag:
 
@@ -65,10 +66,14 @@ def exec_client_disconnect(key=None, value=None, client=None, exit_flag = None):
     output = "disconnecting..."
     client.disconnect()
     print(output)
+    status_code = "002"
+    status_message = Client().get_status_by_code(status_code)["message"]
+    print(status_message)
 
 
 def exec_client_quit(key=None, value=None, client=None, exit_flag = None):
-    exec_client_disconnect(key, value, client, exit_flag)
+    if client.is_alive():
+        exec_client_disconnect(key, value, client, exit_flag)
     exit_flag.activate_exit()
     console_output = "closing the client..."
     print(console_output)
@@ -137,7 +142,7 @@ def function_handler(command, key=None, value=None, client=None, exit_flag=None)
     return commads_functions[command](key, value, client, exit_flag)
 
 
-def valid_user_input(user_input):
+def valid_user_input(user_input, client):
     if not isinstance(user_input,str):
         return "Error: input must be string"
     elif len(user_input) == 0:
@@ -147,6 +152,8 @@ def valid_user_input(user_input):
     (command,key,value) = decode_input(user_input)
     if not valid_command(command):
         return f"Error: {command} is not a command"
+    elif command not in ["connect","quit"] and not client.is_alive():
+        return "Error: you must first establish connection"
     elif command in ["disconnect","quit","list"] and (key != None or value != None):
         return f"Error: {command} can not have parameters"
     elif command == "connect" and (key != None and value != None):
@@ -197,7 +204,7 @@ def decode_input(user_input):
 def process_input(user_input, client, exit_flag):
     user_input = user_input.strip()
     user_input = user_input.lower()
-    error_message = valid_user_input(user_input)
+    error_message = valid_user_input(user_input, client)
     if error_message != None:
         return error_message
     (command,key,value) = decode_input(user_input)
@@ -212,11 +219,10 @@ def input_listener(client, exit_flag):
         error_message = process_input(user_input, client, exit_flag)
         if error_message != None:
             print(error_message)
-        if client.is_alive():
-            print("client is waiting for response...")
+        print("client is waiting for instruction...")
 
 
-def message_break_drown(message):
+def break_down_message(message):
     content = None
     splited_message = message.split("\n")
     line = splited_message.pop(0)
@@ -228,18 +234,19 @@ def message_break_drown(message):
 def response_handler(response):
     status_message = "response not handled yet"
     extra_info = None
-    (line,parameters,content) = message_break_drown(response)
-    status_code = line.split(" ")[0]
-    if status_code in ["003"]:
-        extra_info = "key: "+"".join(parameters.split(":")[1:])
-    elif status_code == "000":
-        extra_info = content
-        if "key" in parameters:
-            extra_info = "".join(parameters.split(":")[1:])
-    status_message = Client().get_status_by_code(status_code)["message"]
-    print(status_message)
-    if extra_info != None:
-        print(extra_info)
+    if response not in ["", None]:
+        (line,parameters,content) = break_down_message(response)
+        status_code = line.split(" ")[0]
+        if status_code in ["003"]:
+            extra_info = "key: "+"".join(parameters.split(":")[1:])
+        elif status_code == "000":
+            extra_info = content
+            if "key" in parameters:
+                extra_info = "".join(parameters.split(":")[1:])
+        status_message = Client().get_status_by_code(status_code)["message"]
+        print(status_message)
+        if extra_info != None:
+            print(extra_info)
 
 
 def server_listener(client, exit_flag):
@@ -248,7 +255,11 @@ def server_listener(client, exit_flag):
             response = client.receive_response()
             response_handler(response)
             print("client is waiting for instruction...")
-        except:
+            if response in ["", None]:
+                break
+        except Exception as e:
+            #print(e)
+            #traceback.print_exc()
             break
 
 
@@ -259,8 +270,10 @@ def try_connect(client, ip, port):
     while seconds < 10 and not client.is_connected():
         try:
             client.connect(ip, port)
-        except:
+        except Exception as e:
             print("trying to connect...")
+            #print(e)
+            #traceback.print_exc()
         time.sleep(1)
         seconds += 1
     if client.is_connected():
@@ -281,9 +294,6 @@ def client_handler(client, exit_flag):
         server_thread.start()
         server_thread.join()
     interface_thread.join()
-    status_code = "002"
-    status_message = Client().get_status_by_code(status_code)["message"]
-    print(status_message)
 
 
 if __name__ == "__main__":

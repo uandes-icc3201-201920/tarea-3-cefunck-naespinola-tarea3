@@ -95,6 +95,7 @@ class Client():
 
     # connect client socket
     def connect(self, hostname, port):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((hostname, port))
 
 
@@ -102,14 +103,16 @@ class Client():
     def disconnect(self):
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
-        pass
 
 
     # send request
     def send_request(self, line, parameters, content):
-        message = message_formater(line, parameters, content)
-        encoded_message = message_encoder(message)
-        self.socket.send(encoded_message)
+        try:
+            message = message_formater(line, parameters, content)
+            encoded_message = message_encoder(message)
+            self.socket.send(encoded_message)
+        except:
+            pass
 
 
     # receive response
@@ -119,9 +122,18 @@ class Client():
         return message
 
     def is_alive(self):
-        if self.socket.fileno() == -1:
+        try:
+            self.socket.getpeername()
+            return True
+        except:
             return False
-        return True
+
+
+    def get_peername(self):
+        try:
+            return self.socket.getpeername()
+        except:
+            return None
 
 
     # status
